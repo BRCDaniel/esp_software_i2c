@@ -22,8 +22,12 @@ SOFTWARE.
 
 */
 
+#include <esp_err.h>
+#include <driver/gpio.h>
+#include <driver/i2c.h>
+
 #define SW_I2C_FREQENCY     100000 /* 100kHz, should not be bigger as 500000 */
-#define SW_I2C_DELAY_US     ((1 / SW_I2C_FREQENCY / 2) * 1000000) /* This delay is for 0.5 periods */
+#define SW_I2C_DELAY_US     ((1 / SW_I2C_FREQENCY) * 1000000)
 
 #define SW_I2C_CLOCK_STRETCH_TIMEOUT   1000 /* Allow Clock-Stretching up to 1ms */
 
@@ -82,4 +86,4 @@ esp_err_t sw_i2c_master_read_byte(uint8_t *buffer, bool ack);
  * 
  * @return ESP_OK if successful, ESP_FAIL otherwise.
 */
-esp_err_t sw_i2c_master_read(uint8_t *buffer, uint16_t length, bool ack);
+esp_err_t sw_i2c_master_read(uint8_t *buffer, uint16_t length, i2c_ack_type_t ack);

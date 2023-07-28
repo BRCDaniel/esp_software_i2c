@@ -26,8 +26,8 @@ SOFTWARE.
 #include <driver/gpio.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <esp_err.h>
 #include <esp_log.h>
+#include <esp_timer.h>
 
 static bool g_i2c_started;
 static gpio_num_t g_i2c_sda;
@@ -41,23 +41,50 @@ static gpio_num_t g_i2c_scl;
 
 static const char* TAG = "software_i2c";
 
+#define NOP() asm volatile ("nop")
+
+unsigned long IRAM_ATTR micros()
+{
+    return (unsigned long) (esp_timer_get_time());
+}
+
+void IRAM_ATTR delayMicroseconds(uint32_t us)
+{
+    uint32_t m = micros();
+    if(us){
+        uint32_t e = (m + us);
+        if(m > e){ //overflow
+            while(micros() > e){
+                NOP();
+            }
+        }
+        while(micros() < e){
+            NOP();
+        }
+    }
+}
+
 /* https://esp-idf.readthedocs.io/en/latest/api-reference/peripherals/i2c.html#_CPPv211i2c_set_pin10i2c_port_tii13gpio_pullup_t13gpio_pullup_t10i2c_mode_t */
 
 /* esp_err_t i2c_set_pin(i2c_port_t i2c_num, int sda_io_num, int scl_io_num, gpio_pullup_t sda_pullup_en, gpio_pullup_t scl_pullup_en, i2c_mode_t mode) */
 esp_err_t sw_i2c_init(gpio_num_t sda, gpio_num_t scl)
 {
-    ESP_LOGD(TAG, "Initializing software i2c with data pin %d.", sda);
-    gpio_set_direction(sda, GPIO_MODE_INPUT_OUTPUT_OD);
-    gpio_set_pull_mode(sda, GPIO_FLOATING);
-
-    ESP_LOGD(TAG, "Initializing software i2c with clock pin %d.", scl);
-    gpio_set_direction(scl, GPIO_MODE_INPUT_OUTPUT_OD);
-    gpio_set_pull_mode(scl, GPIO_FLOATING);
+    gpio_config_t io_conf;
+    io_conf.pin_bit_mask = 0;
+    io_conf.pin_bit_mask |= (1ULL << sda) | (1ULL << scl);
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_INPUT_OUTPUT_OD;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;    
+    gpio_config(&io_conf);
+    gpio_set_level(sda, 1);
+    gpio_set_level(scl, 1);
 
     /* Save the pins in static global variables. */
     g_i2c_sda = sda;
     g_i2c_scl = scl;
 
+    ESP_LOGI(TAG, "Initialised software i2c with pin sda[%d], scl[%d].", sda, scl);
     return ESP_OK;
 }
 
@@ -69,21 +96,21 @@ esp_err_t sw_i2c_master_start()
      /* If already started, do a restart condition. */
     if (g_i2c_started) {
         gpio_set_level(g_i2c_sda, HIGH);
-        ets_delay_us(SW_I2C_DELAY_US);
+        delayMicroseconds(SW_I2C_DELAY_US);
         gpio_set_level(g_i2c_scl, HIGH);
         while (gpio_get_level(g_i2c_scl) == LOW && stretch--) {
-            ets_delay_us(1);
+            delayMicroseconds(1);
         };
-        ets_delay_us(SW_I2C_DELAY_US);
+        delayMicroseconds(SW_I2C_DELAY_US);
     }
 
     if (LOW == gpio_get_level(g_i2c_sda)) {
-        ESP_LOGD(TAG, "Arbitration lost in sw_i2c_master_start()");
+        ESP_LOGE(TAG, "Arbitration lost in sw_i2c_master_start()");
     }
 
     /* Start bit is indicated by a high-to-low transition of SDA with SCL high. */
     gpio_set_level(g_i2c_sda, LOW);
-    ets_delay_us(SW_I2C_DELAY_US);
+    delayMicroseconds(SW_I2C_DELAY_US);
     gpio_set_level(g_i2c_scl, LOW);
 
     g_i2c_started = true;
@@ -98,19 +125,19 @@ esp_err_t sw_i2c_master_stop()
 
     /* The stop bit is indicated by a low-to-high transition of SDA with SCL high. */
     gpio_set_level(g_i2c_sda, LOW);
-    ets_delay_us(SW_I2C_DELAY_US);
+    delayMicroseconds(SW_I2C_DELAY_US);
     gpio_set_level(g_i2c_scl, HIGH);
 
     while (gpio_get_level(g_i2c_scl) == LOW && stretch--) {
-        ets_delay_us(1);
+        delayMicroseconds(1);
     };
 
-    ets_delay_us(SW_I2C_DELAY_US);
+    delayMicroseconds(SW_I2C_DELAY_US);
     gpio_set_level(g_i2c_sda, HIGH);
-    ets_delay_us(SW_I2C_DELAY_US);
+    delayMicroseconds(SW_I2C_DELAY_US);
 
     if (gpio_get_level(g_i2c_sda) == LOW) {
-        ESP_LOGD(TAG, "Arbitration lost in sw_i2c_master_stop()");
+        ESP_LOGE(TAG, "Arbitration lost in sw_i2c_master_stop()");
     }
 
     g_i2c_started = false;
@@ -123,17 +150,17 @@ static void sw_i2c_write_bit(bool bit)
     uint32_t stretch = SW_I2C_CLOCK_STRETCH_TIMEOUT;
 
     gpio_set_level(g_i2c_sda, bit);
-    ets_delay_us(SW_I2C_DELAY_US); /* SDA change propagation delay */
+    delayMicroseconds(SW_I2C_DELAY_US); /* SDA change propagation delay */
     gpio_set_level(g_i2c_scl, HIGH); /* New valid SDA value is available. */
 
     while (gpio_get_level(g_i2c_scl) == LOW && stretch--) {
-        ets_delay_us(1);
+        delayMicroseconds(1);
     };
 
-    ets_delay_us(SW_I2C_DELAY_US); /* Wait for SDA value to be read by slave. */
+    delayMicroseconds(SW_I2C_DELAY_US); /* Wait for SDA value to be read by slave. */
 
     if (bit && (LOW == gpio_get_level(g_i2c_sda))) {
-        ESP_LOGD(TAG, "Arbitration lost in sw_i2c_write_bit()");
+        ESP_LOGE(TAG, "Arbitration lost in sw_i2c_write_bit()");
     }
 
     gpio_set_level(g_i2c_scl, LOW); /* Prepare for next bit. */
@@ -145,14 +172,14 @@ static bool sw_i2c_read_bit()
     bool bit;
 
     gpio_set_level(g_i2c_sda, HIGH); /* Let the slave drive data. */
-    ets_delay_us(SW_I2C_DELAY_US); /* Wait for slave to write. */
+    delayMicroseconds(SW_I2C_DELAY_US); /* Wait for slave to write. */
     gpio_set_level(g_i2c_scl, HIGH); /* New valid SDA value is available. */
 
     while (gpio_get_level(g_i2c_scl) == LOW && stretch--) {
-        ets_delay_us(1);
+        delayMicroseconds(1);
     };
 
-    ets_delay_us(SW_I2C_DELAY_US); /* Wait for slave to write. */
+    delayMicroseconds(SW_I2C_DELAY_US); /* Wait for slave to write. */
     bit = gpio_get_level(g_i2c_sda); /* SCL is high, read a bit. */
     gpio_set_level(g_i2c_scl, LOW); /* Prepare for next bit. */
 
@@ -167,7 +194,7 @@ static uint8_t sw_i2c_read_byte(bool ack)
     for (bit = 0; bit < 8; ++bit) {
         byte = (byte << 1) | sw_i2c_read_bit();
     }
-    sw_i2c_write_bit(ack);
+    sw_i2c_write_bit(!ack); /* ACK is 0 on I2C bus, so we are flipping it */
 
     return byte;
 }
@@ -176,12 +203,11 @@ static bool sw_i2c_write_byte(uint8_t byte)
 {
     uint8_t bit;
     bool ack;
-
     for (bit = 0; bit < 8; ++bit) {
         sw_i2c_write_bit((byte & 0x80) != 0);
         byte <<= 1;
     }
-    ack = sw_i2c_read_bit();
+    ack = !sw_i2c_read_bit(); /* ACK is 0 on I2C bus, so we are flipping it */
     return ack;
 }
 
@@ -211,10 +237,28 @@ esp_err_t sw_i2c_master_read_byte(uint8_t *buffer, bool ack)
 };
 
 /* esp_err_t i2c_master_read(i2c_cmd_handle_t cmd_handle, uint8_t *data, size_t data_len, i2c_ack_type_t ack) */
-esp_err_t sw_i2c_master_read(uint8_t *buffer, uint16_t length, bool ack)
+esp_err_t sw_i2c_master_read(uint8_t *buffer, uint16_t length, i2c_ack_type_t ack)
 {
     while(length) {
-        *buffer = sw_i2c_read_byte(ack);
+        if (length == 1 && ack == I2C_MASTER_LAST_NACK) 
+        {
+            *buffer = sw_i2c_read_byte(false);
+        } else
+        {
+            switch (ack)
+            {
+                case I2C_MASTER_ACK:                
+                case I2C_MASTER_LAST_NACK:
+                    *buffer = sw_i2c_read_byte(true);
+                    break;
+                case I2C_MASTER_NACK:
+                    *buffer = sw_i2c_read_byte(false);
+                    break;
+                default:
+                    return ESP_FAIL;
+            }
+
+        }
         buffer++;
         length--;
     }

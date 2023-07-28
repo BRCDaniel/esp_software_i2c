@@ -22,8 +22,8 @@ SOFTWARE.
 
 */
 
-#define SW_I2C_FREQENCY     100000 /* 100kHz */
-#define SW_I2C_DELAY_US     (1 / SW_I2C_FREQENCY * 1000000)
+#define SW_I2C_FREQENCY     100000 /* 100kHz, should not be bigger as 500000 */
+#define SW_I2C_DELAY_US     ((1 / SW_I2C_FREQENCY / 2) * 1000000) /* This delay is for 0.5 periods */
 
 #define SW_I2C_CLOCK_STRETCH_TIMEOUT   1000 /* Allow Clock-Stretching up to 1ms */
 
@@ -55,16 +55,16 @@ esp_err_t sw_i2c_master_stop();
 /**
  * @brief Write a byte to the slave.
  * 
- * @return ESP_OK if successful, ESP_FAIL otherwise.
+ * @return true if ACK happened.
 */
-esp_err_t sw_i2c_master_write_byte(uint8_t buffer);
+bool sw_i2c_master_write_byte(uint8_t buffer);
 
 /**
  * @brief Write multiple bytes to the slave.
  * 
- * @return ESP_OK if successful, ESP_FAIL otherwise.
+ * @return true if everything got ACK.
 */
-esp_err_t sw_i2c_master_write(uint8_t *buffer, uint8_t length);
+bool sw_i2c_master_write(uint8_t *buffer, uint8_t length);
 
 /**
  * @brief Read a byte from the slave.

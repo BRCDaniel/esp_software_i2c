@@ -29,7 +29,7 @@ SOFTWARE.
 #define SW_I2C_FREQENCY     100000 /* 100kHz, should not be bigger as 500000 */
 #define SW_I2C_DELAY_US     ((1 / SW_I2C_FREQENCY) * 1000000)
 
-#define SW_I2C_CLOCK_STRETCH_TIMEOUT   1000 /* Allow Clock-Stretching up to 1ms */
+#define SW_I2C_CLOCK_STRETCH_TIMEOUT   (SW_I2C_DELAY_US * 10) /* Allow Clock-Stretching up to 10*DELAY_US */
 
 /**
  * @brief Initialize the software i2c.

@@ -22,6 +22,12 @@ SOFTWARE.
 
 */
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include <esp_err.h>
 #include <driver/gpio.h>
 #include <driver/i2c.h>
@@ -87,3 +93,7 @@ esp_err_t sw_i2c_master_read_byte(uint8_t *buffer, bool ack);
  * @return ESP_OK if successful, ESP_FAIL otherwise.
 */
 esp_err_t sw_i2c_master_read(uint8_t *buffer, uint16_t length, i2c_ack_type_t ack);
+
+#ifdef __cplusplus
+}
+#endif

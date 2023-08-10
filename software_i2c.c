@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2018-2019 Mika Tuupola
+Copyright (c) 2018-2019 Mika Tuupola, Daniel Barth
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -43,9 +43,9 @@ static const char* TAG = "software_i2c";
 
 #define NOP() asm volatile ("nop")
 
-unsigned long IRAM_ATTR micros()
+uint32_t IRAM_ATTR micros()
 {
-    return (unsigned long) (esp_timer_get_time());
+    return (uint32_t) (esp_timer_get_time());
 }
 
 void IRAM_ATTR delayMicroseconds(uint32_t us)

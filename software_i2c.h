@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2018-2023 Daniel Barth
+Copyright (c) 2018-2023 Mika Tuupola, Daniel Barth
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@ SOFTWARE.
 
 */
 
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {

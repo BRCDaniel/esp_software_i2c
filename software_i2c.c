@@ -111,8 +111,8 @@ esp_err_t sw_i2c_master_start()
     }
 
     if (sw_i2c_check_arb_lost()) {
-        ESP_LOGD(TAG, "Arbitration lost in sw_i2c_master_start()");
-        ret = ESP_FAIL;
+        ESP_LOGE(TAG, "Arbitration lost in sw_i2c_master_start()");
+        ret = ESP_ERR_TIMEOUT;
     }
 
     /* Start bit is indicated by a high-to-low transition of SDA with SCL high. */
@@ -144,8 +144,8 @@ esp_err_t sw_i2c_master_stop()
     gpio_set_level(g_i2c_sda, HIGH);
     delayMicroseconds(SW_I2C_DELAY_US);
     if (sw_i2c_check_arb_lost()) {
-        ESP_LOGD(TAG, "Arbitration lost in sw_i2c_master_stop()");
-        ret = ESP_FAIL;
+        ESP_LOGE(TAG, "Arbitration lost in sw_i2c_master_stop()");
+        ret = ESP_ERR_TIMEOUT;
     }
 
     g_i2c_started = false;
@@ -169,8 +169,8 @@ static esp_err_t sw_i2c_write_bit(bool bit)
     delayMicroseconds(SW_I2C_DELAY_US); /* Wait for SDA value to be read by slave. */
 
     if (bit && (sw_i2c_check_arb_lost())) {
-        ESP_LOGD(TAG, "Arbitration lost in sw_i2c_write_bit()");
-        ret = ESP_FAIL;
+        ESP_LOGE(TAG, "Arbitration lost in sw_i2c_write_bit()");
+        ret = ESP_ERR_TIMEOUT;
     }
 
     gpio_set_level(g_i2c_scl, LOW); /* Prepare for next bit. */
@@ -200,28 +200,28 @@ static bool sw_i2c_read_bit()
 
 static esp_err_t sw_i2c_read_byte(uint8_t *buffer, bool ack)
 {
-    *buffer = 0;
+    uint8_t byte = 0;
     uint8_t bit;
 
     for (bit = 0; bit < 8; ++bit) {
-        *buffer = (*buffer << 1) | sw_i2c_read_bit();
+        byte = (byte << 1) | sw_i2c_read_bit();
     }
+    
+    *buffer = byte;
     return sw_i2c_write_bit(!ack); /* ACK is 0 on I2C bus, so we are flipping it */
 }
 
 static bool sw_i2c_write_byte(uint8_t byte)
 {
-    uint8_t bit;
     bool ack = false;
     bool arb_check = true;
-    for (bit = 0; bit < 8; ++bit) {
-        if (sw_i2c_write_bit((byte & 0x80) != 0) != ESP_OK) {
+    for (uint8_t pos = 8; pos > 0; pos--) {
+        if (sw_i2c_write_bit((byte >> pos) & 0x1) != ESP_OK) {
             arb_check = false;
         }
-        byte <<= 1;
     }
     ack = !sw_i2c_read_bit(); /* ACK is 0 on I2C bus, so we are flipping it */
-    return ack && arb_check;
+    return ack;
 }
 
 /* esp_err_t i2c_master_write_byte(i2c_cmd_handle_t cmd_handle, uint8_t data, bool ack_en) */

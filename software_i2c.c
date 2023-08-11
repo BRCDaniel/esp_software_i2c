@@ -111,7 +111,7 @@ esp_err_t sw_i2c_master_start()
     }
 
     if (sw_i2c_check_arb_lost()) {
-        ESP_LOGE(TAG, "Arbitration lost in sw_i2c_master_start()");
+        ESP_LOGD(TAG, "Arbitration lost in sw_i2c_master_start()");
         ret = ESP_ERR_TIMEOUT;
     }
 
@@ -144,7 +144,7 @@ esp_err_t sw_i2c_master_stop()
     gpio_set_level(g_i2c_sda, HIGH);
     delayMicroseconds(SW_I2C_DELAY_US);
     if (sw_i2c_check_arb_lost()) {
-        ESP_LOGE(TAG, "Arbitration lost in sw_i2c_master_stop()");
+        ESP_LOGD(TAG, "Arbitration lost in sw_i2c_master_stop()");
         ret = ESP_ERR_TIMEOUT;
     }
 
@@ -169,7 +169,7 @@ static esp_err_t sw_i2c_write_bit(bool bit)
     delayMicroseconds(SW_I2C_DELAY_US); /* Wait for SDA value to be read by slave. */
 
     if (bit && (sw_i2c_check_arb_lost())) {
-        ESP_LOGE(TAG, "Arbitration lost in sw_i2c_write_bit()");
+        ESP_LOGD(TAG, "Arbitration lost in sw_i2c_write_bit()");
         ret = ESP_ERR_TIMEOUT;
     }
 
@@ -213,15 +213,17 @@ static esp_err_t sw_i2c_read_byte(uint8_t *buffer, bool ack)
 
 static bool sw_i2c_write_byte(uint8_t byte)
 {
+    uint8_t bit;
     bool ack = false;
     bool arb_check = true;
-    for (uint8_t pos = 8; pos > 0; pos--) {
-        if (sw_i2c_write_bit((byte >> pos) & 0x1) != ESP_OK) {
+    for (bit = 0; bit < 8; ++bit) {
+        if (sw_i2c_write_bit((byte & 0x80) != 0) != ESP_OK) {
             arb_check = false;
         }
+        byte <<= 1;
     }
     ack = !sw_i2c_read_bit(); /* ACK is 0 on I2C bus, so we are flipping it */
-    return ack;
+    return ack && arb_check;
 }
 
 /* esp_err_t i2c_master_write_byte(i2c_cmd_handle_t cmd_handle, uint8_t data, bool ack_en) */

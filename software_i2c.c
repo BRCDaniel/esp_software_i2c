@@ -88,6 +88,11 @@ esp_err_t sw_i2c_init(gpio_num_t sda, gpio_num_t scl)
     return ESP_OK;
 }
 
+bool sw_i2c_check_arb_lost()
+{
+    return (gpio_get_level(g_i2c_sda) == LOW);
+}
+
 /* esp_err_t i2c_master_start(i2c_cmd_handle_t cmd_handle) */
 esp_err_t sw_i2c_master_start()
 {
@@ -105,7 +110,7 @@ esp_err_t sw_i2c_master_start()
         delayMicroseconds(SW_I2C_DELAY_US);
     }
 
-    if (LOW == gpio_get_level(g_i2c_sda)) {
+    if (sw_i2c_check_arb_lost()) {
         ESP_LOGD(TAG, "Arbitration lost in sw_i2c_master_start()");
         ret = ESP_FAIL;
     }
@@ -138,7 +143,7 @@ esp_err_t sw_i2c_master_stop()
     delayMicroseconds(SW_I2C_DELAY_US);
     gpio_set_level(g_i2c_sda, HIGH);
     delayMicroseconds(SW_I2C_DELAY_US);
-    if (gpio_get_level(g_i2c_sda) == LOW) {
+    if (sw_i2c_check_arb_lost()) {
         ESP_LOGD(TAG, "Arbitration lost in sw_i2c_master_stop()");
         ret = ESP_FAIL;
     }
@@ -163,7 +168,7 @@ static esp_err_t sw_i2c_write_bit(bool bit)
 
     delayMicroseconds(SW_I2C_DELAY_US); /* Wait for SDA value to be read by slave. */
 
-    if (bit && (LOW == gpio_get_level(g_i2c_sda))) {
+    if (bit && (sw_i2c_check_arb_lost())) {
         ESP_LOGD(TAG, "Arbitration lost in sw_i2c_write_bit()");
         ret = ESP_FAIL;
     }

@@ -259,7 +259,6 @@ esp_err_t sw_i2c_master_read_byte(uint8_t *buffer, bool ack)
 esp_err_t sw_i2c_master_read(uint8_t *buffer, uint16_t length, i2c_ack_type_t ack)
 {
     esp_err_t ret = ESP_OK;
-    esp_err_t oneByteState = ESP_OK;
     while(length) {
         if (length == 1 && ack == I2C_MASTER_LAST_NACK) 
         {
@@ -270,18 +269,17 @@ esp_err_t sw_i2c_master_read(uint8_t *buffer, uint16_t length, i2c_ack_type_t ac
             {
                 case I2C_MASTER_ACK:                
                 case I2C_MASTER_LAST_NACK:
-                    oneByteState = sw_i2c_master_read_byte(buffer, true);
+                    ret = sw_i2c_master_read_byte(buffer, true);
                     break;
                 case I2C_MASTER_NACK:
-                    oneByteState = sw_i2c_master_read_byte(buffer, false);
+                    ret = sw_i2c_master_read_byte(buffer, false);
                     break;
                 default:
-                    oneByteState = ESP_FAIL;
+                    ret = ESP_FAIL;
                     break;
             }
-            if (oneByteState != ESP_OK)
+            if (ret != ESP_OK)
             {
-                ret = oneByteState;
                 break;
             }
         }

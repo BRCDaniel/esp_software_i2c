@@ -50,7 +50,9 @@ extern "C" {
 esp_err_t sw_i2c_init(gpio_num_t sda, gpio_num_t scl);
 
 /**
- * @brief Check if the bus is busy.
+ * @brief Check if the bus is busy / if master has lost arbitration.
+ * 
+ * @return true if bus is busy.
 */
 bool sw_i2c_check_arb_lost();
 

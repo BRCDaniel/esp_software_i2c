@@ -55,8 +55,8 @@ esp_err_t sw_i2c_init(gpio_num_t sda, gpio_num_t scl)
     io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
     io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;    
     gpio_config(&io_conf);
-    gpio_set_level(sda, 1);
-    gpio_set_level(scl, 1);
+    gpio_set_level(sda, HIGH);
+    gpio_set_level(scl, HIGH);
 
     /* Save the pins in static global variables. */
     g_i2c_sda = sda;
@@ -126,6 +126,7 @@ esp_err_t sw_i2c_master_stop()
         ret = ESP_ERR_TIMEOUT;
     }
 
+    ets_delay_us(SW_I2C_DELAY_US);
     g_i2c_started = false;
 
     return ret;

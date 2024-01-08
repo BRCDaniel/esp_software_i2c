@@ -33,8 +33,10 @@ extern "C" {
 #include <driver/gpio.h>
 #include <driver/i2c.h>
 
-#define SW_I2C_FREQENCY     100000 /* 100kHz, should not be bigger as 500000 */
-#define SW_I2C_DELAY_US     ((1 / SW_I2C_FREQENCY) * 1000000)
+#if !defined(SW_I2C_FREQENCY)
+    #define SW_I2C_FREQENCY     (100u * 1000u) /* 100kHz, should not be bigger as 500000 */
+#endif
+#define SW_I2C_DELAY_US     ((1000000u / (SW_I2C_FREQENCY*2)) -1u) /*Frequency is High+Low, so *2 + We always have to subtract 1us, for overhead */
 
 #define SW_I2C_CLOCK_STRETCH_TIMEOUT   (SW_I2C_DELAY_US * 10) /* Allow Clock-Stretching up to 10*DELAY_US */
 

@@ -213,7 +213,7 @@ bool sw_i2c_master_write_byte(uint8_t buffer)
 }
 
 /* esp_err_t i2c_master_write(i2c_cmd_handle_t cmd_handle, uint8_t *data, size_t data_len, bool ack_en) */
-bool sw_i2c_master_write(uint8_t *buffer, uint8_t length, bool lastByteNACK) // bool ack_enable??
+bool sw_i2c_master_write_handleNACK(uint8_t *buffer, uint8_t length, bool lastByteNACK) // bool ack_enable??
 {
     bool rtn = true;
     uint8_t count = 0;
@@ -230,6 +230,11 @@ bool sw_i2c_master_write(uint8_t *buffer, uint8_t length, bool lastByteNACK) // 
     }
 
     return ((rtn) && (length == count));
+}
+
+bool sw_i2c_master_write(uint8_t *buffer, uint8_t length)
+{
+    return sw_i2c_master_write_handleNACK(buffer, length, false);
 }
 
 /* esp_err_t i2c_master_read_byte(i2c_cmd_handle_t cmd_handle, uint8_t *data, i2c_ack_type_t ack) */

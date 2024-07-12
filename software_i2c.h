@@ -82,7 +82,21 @@ bool sw_i2c_master_write_byte(uint8_t buffer);
 /**
  * @brief Write multiple bytes to the slave.
  * 
- * @return true if everything got ACK.
+ * @param buffer Pointer to the buffer where the bytes are stored.
+ * @param length The number of bytes to write.
+ * @param lastByteNACK If true, the last byte will not be ACKed by slave and checked to NACK.
+ * 
+ * @return true if everything got ACK / NACK if lastByteNACK is set.
+*/
+bool sw_i2c_master_write_handleNACK(uint8_t *buffer, uint8_t length, bool lastByteNACK);
+
+/**
+ * @brief Write multiple bytes to the slave.
+ * 
+ * @param buffer Pointer to the buffer where the bytes are stored.
+ * @param length The number of bytes to write.
+ * 
+ * @return true if everything got ACK / NACK if lastByteNACK is set.
 */
 bool sw_i2c_master_write(uint8_t *buffer, uint8_t length);
 
